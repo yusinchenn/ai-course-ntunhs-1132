@@ -21,7 +21,7 @@
 - 06/06 專案期末報告與展示（final/）
 
 ## 👥 小組成員
-- [@yusinChenn](https://github.com/yusinChenn)
+- [@yusinchenn](https://github.com/yusinchenn)
 - [@lai5566](https://github.com/lai5566)
 - [@ziyan9453](https://github.com/ziyan9453)
 - [@sung12345678](https://github.com/sung12345678)
