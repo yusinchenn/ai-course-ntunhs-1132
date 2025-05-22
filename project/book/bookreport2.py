@@ -30,6 +30,12 @@ x_test = x_test.reshape(-1, 784)
 y_train = tf.keras.utils.to_categorical(y_train, 10)
 y_test = tf.keras.utils.to_categorical(y_test, 10)
 
+from sklearn.model_selection import train_test_split
+
+# 拆分訓練資料與驗證資料（例如：80% 訓練、20% 驗證）
+x_train, x_val, y_train, y_val = train_test_split(
+    x_train, y_train, test_size=0.2, random_state=42)
+
 print("訓練資料形狀：", x_train.shape, y_train.shape)
 print("測試資料形狀：", x_test.shape, y_test.shape)
 
@@ -111,7 +117,9 @@ with tf.name_scope("evaluate_model"):
 trainEpochs = 10
 batchSize = 100
 totalBatchs = int(len(x_train) / batchSize)
+
 epoch_list, accuracy_list, loss_list = [], [], []
+val_loss_list, val_accuracy_list = [], []
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
@@ -123,12 +131,30 @@ for epoch in range(trainEpochs):
     batch_y = y_train[i*batchSize:(i+1)*batchSize]
     sess.run(optimizer, feed_dict={x: batch_x, y_label: batch_y, keep_prob: 0.8})
 
-  loss, acc = sess.run([loss_function, accuracy],
-                       feed_dict={x: x_test, y_label: y_test, keep_prob: 1.0})
+  # 訓練集表現（loss + acc）
+  train_loss, train_acc = sess.run([loss_function, accuracy],
+    feed_dict={x: x_train, y_label: y_train, keep_prob: 1.0})
+  loss_list.append(train_loss)
+  accuracy_list.append(train_acc)
+
+  # 驗證集表現（val_loss + val_acc）
+  val_loss, val_acc = sess.run([loss_function, accuracy],
+    feed_dict={x: x_val, y_label: y_val, keep_prob: 1.0})
+  val_loss_list.append(val_loss)
+  val_accuracy_list.append(val_acc)
+
   epoch_list.append(epoch)
-  loss_list.append(loss)
-  accuracy_list.append(acc)
-  print("Train Epoch:", '%02d' % (epoch+1), "Loss=", "{:.9f}".format(loss), " Accuracy=", acc)
+
+  print("Train Epoch:", '%02d' % (epoch+1),
+        "Train Loss=", "{:.9f}".format(train_loss),
+        "Train Accuracy=", train_acc,
+        "Val Loss=", "{:.9f}".format(val_loss),
+        "Val Accuracy=", val_acc)
+
+  # Early stopping 檢查條件
+  if epoch > 3 and val_loss > val_loss_list[-2]:
+      print("Validation loss increasing, early stop!")
+      break
 
 duration = time() - startTime
 print("Train Finished takes:", duration)
@@ -137,14 +163,18 @@ print("Train Finished takes:", duration)
 import matplotlib.pyplot as plt
 
 # 自訂繪圖函數：顯示訓練過程中的 loss 與 accuracy 變化
-def plot_training_history(loss_list, accuracy_list, title="Training History"):
+def plot_training_history(
+    loss_list, accuracy_list,
+    val_loss_list, val_accuracy_list,
+    title="Training vs Validation"
+):
     epochs = range(1, len(loss_list) + 1)
-
     plt.figure(figsize=(12, 5))
 
     # Plot Loss
     plt.subplot(1, 2, 1)
-    plt.plot(epochs, loss_list, 'b', label='Loss')
+    plt.plot(epochs, loss_list, 'b', label='Train Loss')
+    plt.plot(epochs, val_loss_list, 'r--', label='Val Loss')
     plt.title('Loss Curve')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
@@ -153,20 +183,25 @@ def plot_training_history(loss_list, accuracy_list, title="Training History"):
 
     # Plot Accuracy
     plt.subplot(1, 2, 2)
-    plt.plot(epochs, accuracy_list, 'g', label='Accuracy')
+    plt.plot(epochs, accuracy_list, 'g', label='Train Accuracy')
+    plt.plot(epochs, val_accuracy_list, 'orange', linestyle='--', label='Val Accuracy')
     plt.title('Accuracy Curve')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.grid(True)
     plt.legend()
 
-    # 總標題
+    # 整體標題與排版
     plt.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
 # 使用此函數繪製訓練記錄（你之前紀錄的 loss_list 與 accuracy_list）
-plot_training_history(loss_list, accuracy_list, title="CNN Model Training Result")
+plot_training_history(
+    loss_list, accuracy_list,
+    val_loss_list, val_accuracy_list,
+    title="CNN Training vs Validation Curve"
+)
 
 """### 進行預測"""
 
@@ -200,7 +235,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 # 將 one-hot 的 y_test 轉為標籤值
 y_true = np.argmax(y_test, axis=1)
-y_pred = prediction_result  # 已經是 argmax 預測結果
+y_pred = prediction_result
 
 # 印出準確率、精確率、召回率、F1 分數
 print("Accuracy Score:", accuracy_score(y_true, y_pred))
