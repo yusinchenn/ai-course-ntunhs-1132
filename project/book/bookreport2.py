@@ -22,7 +22,8 @@ from tensorflow.keras.datasets import mnist
 x_train = x_train / 255.0
 x_test = x_test / 255.0
 
-# Flatten 28x28 -> 784
+# 展平（Flatten） 28x28 -> 784
+# 為了與 TensorFlow 1.x 的占位符（placeholder）輸入格式匹配
 x_train = x_train.reshape(-1, 784)
 x_test = x_test.reshape(-1, 784)
 
@@ -30,13 +31,13 @@ x_test = x_test.reshape(-1, 784)
 y_train = tf.keras.utils.to_categorical(y_train, 10)
 y_test = tf.keras.utils.to_categorical(y_test, 10)
 
+# 拆分訓練資料與驗證資料（80% 訓練、20% 驗證）
 from sklearn.model_selection import train_test_split
-
-# 拆分訓練資料與驗證資料（例如：80% 訓練、20% 驗證）
 x_train, x_val, y_train, y_val = train_test_split(
     x_train, y_train, test_size=0.2, random_state=42)
 
 print("訓練資料形狀：", x_train.shape, y_train.shape)
+print("驗證資料形狀：", x_val.shape, y_val.shape)
 print("測試資料形狀：", x_test.shape, y_test.shape)
 
 """### 建立共用函數"""
@@ -44,13 +45,15 @@ print("測試資料形狀：", x_test.shape, y_test.shape)
 # 定義 weight 函數,用於建立權重 (weight) 張量
 def weight(shape):
   return tf.Variable(tf.truncated_normal(shape, stddev=0.1), name='W')
+
 # 定義 bias 函數,用於建立偏差 (bias) 張量
 def bias(shape):
   return tf.Variable(tf.constant(0.1, shape=shape), name='b')
 
-# . 定義 conv2d 函數,用於進行卷積運算
+# 定義 conv2d 函數,用於進行卷積運算
 def conv2d(x, W):
   return tf.nn.conv2d(x, W, strides=[1,1,1,1], padding='SAME')
+
 # 建立 max_pool_2x2 函數,用於建立池化層
 def max_pool_2x2(x):
   return tf.nn.max_pool(x, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME')
@@ -62,7 +65,7 @@ with tf.name_scope('Input_Layer'):
   x = tf.placeholder("float", shape=[None, 784], name="x")
   x_image = tf.reshape(x, [-1, 28, 28, 1])
 
-#建立卷積層1
+# 建立卷積層1
 with tf.name_scope('C1_Conv'):
   W1 = weight([5, 5, 1, 16])
   b1 = bias([16])
